@@ -1,0 +1,7 @@
+h1 {
+  position: absolute;
+  font-weight: 200;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}

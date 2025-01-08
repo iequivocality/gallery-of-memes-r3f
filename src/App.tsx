@@ -2,9 +2,9 @@ import { Canvas, ThreeEvent, useFrame, useLoader, useThree } from '@react-three/
 import { Object3D, SpotLight, TextureLoader } from 'three';
 
 import './App.css'
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { MeshReflectorMaterial } from '@react-three/drei';
+import { MeshReflectorMaterial, PerspectiveCamera } from '@react-three/drei';
 
 const images = [
   {
@@ -62,7 +62,7 @@ function Artwork({ image, index }: {image: typeof images[number], index: number}
   );
 }
 
-function RootNode() {
+function RootNode({ changeIndex }: { changeIndex: (newIndex: number) => void }) {
   const rootNode = useRef<Object3D>(null);
 
   const rotateGallery = (direction: -1 | 1, newIndex: number) => {
@@ -70,6 +70,7 @@ function RootNode() {
     if (rootNode.current) {
       gsap.to(rootNode.current.rotation, { duration: 0.5, y: rootNode.current.rotation.y + deltaY, ease: "power1.inOut" });
     }
+    changeIndex(newIndex);
   };
 
   const checkIntersection = (event: ThreeEvent<MouseEvent>) => {
@@ -98,35 +99,43 @@ function RootNode() {
 
 function App() {
   const spotlight = useMemo(() => new SpotLight(0xffffff), []);
+  const [ index, setIndex ] = useState(0);
 
   return (
     <>
-      <Canvas
-        camera={{ fov: 75, near: 0.1, far: 1000, position: [0,0,0]}}>
-        <group>
-          <primitive
-            object={spotlight}
-            intensity={100.0}
-            distance={10.0}
-            angle={Math.PI / 3}
-            penumbra={1}
-            position={[0, 5, 0]}
-          />
-          <primitive object={spotlight.target} position={[0, 0.5, -5]} />
-        </group>
-        <RootNode/>
-        <mesh position={[0, -1.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[10]} />
-          <MeshReflectorMaterial
-            mirror={1}
-            blur={[300, 300]}
-            resolution={720}
-            mixBlur={0.6}
-            minDepthThreshold={0.4}
-            maxDepthThreshold={1.4}
-            metalness={0.5}
-          />
-        </mesh>
+      <h1>{images[index].title}</h1>
+      <Canvas>
+        <PerspectiveCamera makeDefault={true} position={[0, 0, 0]}>
+          <group>
+            <primitive
+              object={spotlight}
+              intensity={100.0}
+              distance={10.0}
+              angle={Math.PI / 3}
+              penumbra={1}
+              position={[0, 5, 0]}
+            />
+            <primitive object={spotlight.target} position={[0, 0.5, -5]} />
+          </group>
+          <RootNode changeIndex={(newIndex) => {
+            gsap.to("h1", {opacity: 0, duration: 0.5, ease: "power1.inOut", onComplete: () => {
+              setIndex(newIndex);
+              gsap.to("h1", {opacity: 1, duration: 0.5, ease: "power1.inOut"});
+            }});
+          }} />
+          <mesh position={[0, -1.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[10]} />
+            <MeshReflectorMaterial
+              mirror={1}
+              blur={[300, 300]}
+              resolution={720}
+              mixBlur={0.6}
+              minDepthThreshold={0.4}
+              maxDepthThreshold={1.4}
+              metalness={0.5}
+            />
+          </mesh>
+        </PerspectiveCamera>
       </Canvas>
     </>
   )
