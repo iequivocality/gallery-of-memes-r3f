@@ -4,6 +4,7 @@ import { Object3D, SpotLight, TextureLoader } from 'three';
 import './App.css'
 import { useMemo, useRef } from 'react';
 import gsap from 'gsap';
+import { MeshReflectorMaterial } from '@react-three/drei';
 
 const images = [
   {
@@ -107,13 +108,25 @@ function App() {
             object={spotlight}
             intensity={100.0}
             distance={10.0}
-            angle={0.65}
+            angle={Math.PI / 3}
             penumbra={1}
             position={[0, 5, 0]}
           />
           <primitive object={spotlight.target} position={[0, 0.5, -5]} />
         </group>
         <RootNode/>
+        <mesh position={[0, -1.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[10]} />
+          <MeshReflectorMaterial
+            mirror={1}
+            blur={[300, 300]}
+            resolution={720}
+            mixBlur={0.6}
+            minDepthThreshold={0.4}
+            maxDepthThreshold={1.4}
+            metalness={0.5}
+          />
+        </mesh>
       </Canvas>
     </>
   )
