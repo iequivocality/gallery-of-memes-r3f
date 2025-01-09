@@ -1,4 +1,4 @@
-import { Canvas, ThreeEvent, useFrame, useLoader, useThree } from '@react-three/fiber';
+import { Canvas, ThreeEvent, useLoader } from '@react-three/fiber';
 import { Object3D, SpotLight, TextureLoader } from 'three';
 
 import './App.css'
@@ -34,6 +34,14 @@ const images = [
   }
 ];
 
+/**
+ * The artwork component is a single artwork in the gallery.
+ * The mesh will contain the geometry and material as children. While the object3D will be the parent
+ * so the transformation on root node can be applied to the children.
+ * 
+ * The artwork, the border and the arrows are added to the base node in the same way.
+ * 
+ */
 function Artwork({ image, index }: {image: typeof images[number], index: number}) {
   const artworkTexture = useLoader(TextureLoader, image.image);
   const leftArrowTexture = useLoader(TextureLoader, "chevron-left.png");
@@ -62,6 +70,14 @@ function Artwork({ image, index }: {image: typeof images[number], index: number}
   );
 }
 
+/**
+ * The hierarchy of the scene is easily recognizable because of how React works.
+ * 
+ * This is the rootNode, which we add to the scene (i.e Canvas). We use the ref to access the object3D
+ * and add the rotation animation to it when the user clicks on the artwork.
+ * 
+ * Unlike on the VanillaJS version, we are using gsap to animate the rotation.
+ */
 function RootNode({ changeIndex }: { changeIndex: (newIndex: number) => void }) {
   const rootNode = useRef<Object3D>(null);
 
@@ -73,6 +89,11 @@ function RootNode({ changeIndex }: { changeIndex: (newIndex: number) => void }) 
     changeIndex(newIndex);
   };
 
+
+  /**
+   * Unlike, three JS we can check the intersections of the raycaster with onClick instead of
+   * using the raycaster object on the scene.
+   */
   const checkIntersection = (event: ThreeEvent<MouseEvent>) => {
     const { intersections } = event;
     if (intersections.length > 0) {
@@ -101,11 +122,31 @@ function App() {
   const spotlight = useMemo(() => new SpotLight(0xffffff), []);
   const [ index, setIndex ] = useState(0);
 
+  /**
+   * Change the title of the artwork when the user clicks on the left or right arrow.
+   * Opacity of the heading is handled by gsap.
+   */
+  const animateChangeArtwork = (newIndex: number) => {
+    gsap.to("h1", {opacity: 0, duration: 0.5, ease: "power1.inOut", onComplete: () => {
+      setIndex(newIndex);
+      gsap.to("h1", {opacity: 1, duration: 0.5, ease: "power1.inOut"});
+    }});
+  };
+
   return (
     <>
       <h1>{images[index].title}</h1>
       <Canvas>
-        <PerspectiveCamera makeDefault={true} position={[0, 0, 0]}>
+        {/* We used PerspectiveCamera from @react-three/drei to create the desired effect of only showing
+        one artwork per scene. The default camera from Canvas doesn't provide the desired effect. */}
+        <PerspectiveCamera makeDefault position={[0, 0, 0]}>
+          {/** We use the group component to add a spotlight with the target being the position where we can see the artwork.
+           * The position is on the global space not the local space of the artwork so rotating the root will not transform
+           * the spotlight.
+           * 
+           * We used <primitive> instead of <spotLight> because we want to memoize the spotlight without
+           * using useRef and we want to get the spotlight target as well, which is we need to add onto the scene. 
+           */}
           <group>
             <primitive
               object={spotlight}
@@ -117,12 +158,15 @@ function App() {
             />
             <primitive object={spotlight.target} position={[0, 0.5, -5]} />
           </group>
-          <RootNode changeIndex={(newIndex) => {
-            gsap.to("h1", {opacity: 0, duration: 0.5, ease: "power1.inOut", onComplete: () => {
-              setIndex(newIndex);
-              gsap.to("h1", {opacity: 1, duration: 0.5, ease: "power1.inOut"});
-            }});
-          }} />
+          <RootNode changeIndex={animateChangeArtwork} />
+          {/* 
+            We added a floor to the scene like the gallery is in a museum.
+
+            Add a reflection to the floor of the scene. The values of MeshReflectorMaterial is
+            tinkered to make it look like a mirror based on the spotlight we currently have. We don't want the floor
+            to be a mirror so we want to blur the textures out like a clean shiny floor.
+           */
+          }
           <mesh position={[0, -1.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
             <circleGeometry args={[10]} />
             <MeshReflectorMaterial
